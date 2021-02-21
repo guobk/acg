@@ -187,11 +187,11 @@ public class TemplateBuilder {
                     modelMap.put("keyType",keyType);
                     modelMap.put("serviceName",SERVICE_NAME);
 
-                    // 创建JavaBean
+                    // 创建VO
                     VoBuilder.builder(modelMap);
 
-                    // 创建Dao
-                    DaoBuilder.builder(modelMap);
+                    // 创建Mapper
+                    MapperBuilder.builder(modelMap);
 
                     //创建MapperXml
                     MapperXmlBuilder.builder(modelMap);

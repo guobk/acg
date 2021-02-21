@@ -44,6 +44,7 @@ public class TemplateUtil {
         dataModel.put("package_feign",TemplateBuilder.PACKAGE_FEIGN);
         dataModel.put("package_vo",TemplateBuilder.PACKAGE_VO);
         dataModel.put("package_mapper",TemplateBuilder.PACKAGE_MAPPER);
+        dataModel.put("package_mapperxml",TemplateBuilder.PACKAGE_MAPPERXML);
         dataModel.put("package_service",TemplateBuilder.PACKAGE_SERVICE_INTERFACE);
         dataModel.put("package_service_impl",TemplateBuilder.PACKAGE_SERVICE_INTERFACE_IMPL);
 

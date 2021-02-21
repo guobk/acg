@@ -7,7 +7,7 @@ import java.util.Map;
  * @Description:Dao构建
  * @Date  guobk 20210217
  *****/
-public class DaoBuilder {
+public class MapperBuilder {
 
 
     /***
@@ -15,7 +15,7 @@ public class DaoBuilder {
      * @param modelMap
      */
     public static void builder(Map<String,Object> modelMap){
-        // 生成Dao层文件
+        // 生成Mapper层文件
         BuilderFactory.builder(modelMap,
             "/template/mapper",
                 "Mapper.java",
