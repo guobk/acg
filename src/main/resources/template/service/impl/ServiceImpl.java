@@ -1,14 +1,21 @@
 package ${package_service_impl};
+
+<#if SearchType=="2" || SearchType=="3">
 import ${package_mapper}.${Table}Mapper;
 import ${package_vo}.${Table};
+</#if>
 import ${package_service}.${Table}Service;
-import com.github.pagehelper.PageHelper;
-import com.github.pagehelper.PageInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import tk.mybatis.mapper.entity.Example;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 /****
  * @Author: guobk
  * @Description:${Table}业务层接口实现类
@@ -16,122 +23,63 @@ import java.util.List;
 @Service
 public class ${Table}ServiceImpl implements ${Table}Service {
 
-    // 注入持久层对象
+    Logger logger = LoggerFactory.getLogger(${Table}ServiceImpl.class);
+    <#if SearchType=="2" || SearchType=="3">
+
     @Autowired
     private ${Table}Mapper ${table}Mapper;
+    </#if>
 
+    @Autowired
+    private RestTemplate restTemplate;
 
-    /**
-     * 条件+分页查询${Table}表数据
-     * @param ${table} 查询条件
-     * @param page 页码
-     * @param size 页大小
-     * @return 分页结果
-     */
-    @Override
-    public PageInfo<${Table}> findPage(${Table} ${table}, int page, int size){
-        // 分页
-        PageHelper.startPage(page,size);
-        // 搜索条件构建
-        Example example = createExample(${table});
-        // 执行搜索
-        return new PageInfo<${Table}>(${table}Mapper.selectByExample(example));
-    }
+    ${r'@Value("${common_url}")'}
+    private String common_url;
 
-    /**
-     * 分页查询${Table}表数据
-     * @param page
-     * @param size
+    /***
+     * 查询${Table}列表数据
+     * @param paramMap
      * @return
      */
     @Override
-    public PageInfo<${Table}> findPage(int page, int size){
-        // 静态分页
-        PageHelper.startPage(page,size);
-        // 分页查询
-        return new PageInfo<${Table}>(${table}Mapper.selectAll());
-    }
+    public Map get${Table}List(Map paramMap){
+        Map resultMap = new HashMap<>();
 
-    /**
-     * 条件查询${Table}表数据
-     * @param ${table}
-     * @return
-     */
-    @Override
-    public List<${Table}> findList(${Table} ${table}){
-        // 构建查询条件
-        Example example = createExample(${table});
-        // 根据构建的条件查询数据
-        return ${table}Mapper.selectByExample(example);
-    }
+        String resourceId = "${resourceID}";
+        String tableName = "${TableID}";
+        int pageNum = paramMap.get("pageNum") == null ? 1 : Integer.parseInt(paramMap.get("pageNum").toString());
+        int pageSize = paramMap.get("pageSize") == null ? 1 : Integer.parseInt(paramMap.get("pageSize").toString());
 
-
-    /**
-     * ${Table}构建查询对象
-     * @param ${table}
-     * @return
-     */
-    public Example createExample(${Table} ${table}){
-        Example example=new Example(${Table}.class);
-        Example.Criteria criteria = example.createCriteria();
-        if(${table}!=null){
-            <#list models as md>
-            //  ${md.desc}
-            if(!StringUtils.isEmpty(${table}.get${md.upperName}())){
-                <#if (md.name?contains("title") || md.name?contains("name"))>
-                    criteria.andLike("${md.name}","%"+${table}.get${md.upperName}()+"%");
-                <#else>
-                    criteria.andEqualTo("${md.name}",${table}.get${md.upperName}());
-                </#if>
-            }
-            </#list>
+    <#if SearchType=="0">
+        String querySql = "select * from " + tableName + " where 1=1";
+        String queryTotalSql = "select count(*) from " + tableName + " where 1=1";
+        List<Map> totalList = restTemplate.postForObject(this.common_url + "/matrixservice/queryMPPBySQL?resourceId={resourceId}&querySQL={querySQL}",null,List.class,resourceId,queryTotalSql);
+        if(totalList.size() > 0){
+            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("COUNT_DATA")));
+            List<Map> dataList = restTemplate.postForObject(this.common_url + "/matrixservice/queryMPPBySQL?resourceId={resourceId}&querySQL={querySQL}&pageNum={pageNum}&pageSize={pageSize}",null,List.class,resourceId,querySql,pageNum,pageSize);
+            resultMap.put("detail",dataList);
+        }else {
+            resultMap.put("total",0);
+            resultMap.put("detail",new ArrayList<>());
         }
-        return example;
-    }
+    <#elseif SearchType == "1">
+        String querySql = "select * from " + tableName + " where 1=1";
+        String queryTotalSql = "select count(*) from " + tableName + " where 1=1";
+        List<Map> totalList = restTemplate.postForObject(this.common_url + "/matrixservice/queryOracleBySQL?resourceId={resourceId}&querySQL={querySQL}",null,List.class,resourceId,queryTotalSql);
+        if(totalList.size() > 0){
+            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("COUNT_DATA")));
+            List<Map> dataList = restTemplate.postForObject(this.common_url + "/matrixservice/queryOracleBySQL?resourceId={resourceId}&querySQL={querySQL}&pageNum={pageNum}&pageSize={pageSize}",null,List.class,resourceId,querySql,pageNum,pageSize);
+            resultMap.put("detail",dataList);
+        }else {
+            resultMap.put("total",0);
+            resultMap.put("detail",new ArrayList<>());
+        }
+    <#elseif SearchType == "2">
+        //TODO Oracle
+    <#elseif SearchType == "3">
+        //TODO MySql
+    </#if>
 
-    /**
-     * 根据id删除${Table}表数据
-     * @param id
-     */
-    @Override
-    public void delete(${keyType} id){
-        ${table}Mapper.deleteByPrimaryKey(id);
-    }
-
-    /**
-     * 修改${Table}表数据
-     * @param ${table}
-     */
-    @Override
-    public void update(${Table} ${table}){
-        ${table}Mapper.updateByPrimaryKey(${table});
-    }
-
-    /**
-     * 增加${Table}表数据
-     * @param ${table}
-     */
-    @Override
-    public void add(${Table} ${table}){
-        ${table}Mapper.insert(${table});
-    }
-
-    /**
-     * 根据ID查询${Table}表数据
-     * @param id
-     * @return
-     */
-    @Override
-    public ${Table} findById(${keyType} id){
-        return  ${table}Mapper.selectByPrimaryKey(id);
-    }
-
-    /**
-     * 查询${Table}表全部数据
-     * @return
-     */
-    @Override
-    public List<${Table}> findAll() {
-        return ${table}Mapper.selectAll();
+        return resultMap;
     }
 }

@@ -49,6 +49,9 @@ public class TemplateBuilder {
     // 服务名字
     public static String SERVICE_NAME;
 
+    // 查询类型
+    public static String SEARCH_TYPE;
+
     // swagger-ui路径
     public static String SWAGGER_UI_PATH;
 
@@ -72,6 +75,7 @@ public class TemplateBuilder {
             userName = props.getProperty("userName");
             SWAGGER = Boolean.valueOf(props.getProperty("enableSwagger"));
             SERVICE_NAME = props.getProperty("serviceName");
+            SEARCH_TYPE = props.getProperty("SearchType");
             SWAGGER_UI_PATH = props.getProperty("swaggeruipath");
             // 工程路径
             PROJECT_PATH=TemplateBuilder.class.getClassLoader().getResource("").getPath().replace("/target/classes/","")+"/src/main/java/";
@@ -87,146 +91,187 @@ public class TemplateBuilder {
      * 模板构建
      */
     public static void builder(){
-        try {
-            // 获取数据库连接
-            Connection conn = DriverManager.getConnection(
+        if(SEARCH_TYPE.equals("0") || SEARCH_TYPE.equals("1")){
+            // 获取表名
+            String tableName=props.getProperty("TableID");
+            // 名字操作,去掉tab_,tb_，去掉_并转驼峰
+            String table = StringUtils.replace_(StringUtils.replaceTab(tableName));
+            // 大写对象
+            String Table =StringUtils.firstUpper(table);
+            // 创建该表的JavaBean
+            Map<String,Object> modelMap = new HashMap<String,Object>();
+            modelMap.put("projectName",PROJECT_NAME);
+            modelMap.put("SearchType",SEARCH_TYPE);
+            modelMap.put("resourceID",props.getProperty("ResourceID"));
+            modelMap.put("TableID",tableName);
+            modelMap.put("table",table);
+            modelMap.put("Table",Table);
+            modelMap.put("swagger",SWAGGER);
+
+            // 创建Service接口
+            ServiceBuilder.builder(modelMap);
+
+            // 创建ServiceImpl实现类
+            ServiceImplBuilder.builder(modelMap);
+
+            // 创建Controller
+            ControllerBuilder.builder(modelMap);
+
+        }else if(SEARCH_TYPE.equals("2")){
+            try {
+                // 获取数据库连接
+                Connection conn = DriverManager.getConnection(
                     props.getProperty("url"),
                     props.getProperty("userName"),
                     props.getProperty("passWord"));
-            DatabaseMetaData metaData = conn.getMetaData();
+                DatabaseMetaData metaData = conn.getMetaData();
 
-            // 获取数据库类型：MySQL
-            String databaseType = metaData.getDatabaseProductName();
+                // 获取数据库类型：MySQL
+                String databaseType = metaData.getDatabaseProductName();
 
-            // 针对MySQL数据库进行相关生成操作
-            if(databaseType.equals("MySQL")){
-                // 获取所有表结构
-                ResultSet tableResultSet = metaData.getTables(null, "%", "%", new String[]{"TABLE"});
+                // 针对MySQL数据库进行相关生成操作
+                if(databaseType.equals("MySQL")){
+                    builderMySql(conn);
+                }
+                //针对Oracle数据库进行相关生成操作
+                else if(databaseType.equals("Oracle")){
+                    builderOracle();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
-                // 获取数据库名字
-                String database = conn.getCatalog();
+    public static void builderOracle(){
+        //针对Oracle 在hz版本开发
+    }
 
-                // Swagger信息集合
-                List<SwaggerModel> swaggerModels = new ArrayList<>();       // Model
-                List<SwaggerPath> swaggerPathList = new ArrayList<>();    // Method
+    public static void builderMySql(Connection conn){
+        try {
+            // 获取所有表结构
+            ResultSet tableResultSet = conn.getMetaData().getTables(null, "%", "%", new String[]{"TABLE"});
 
-                // 循环所有表信息
-                while (tableResultSet.next()){
-                    // 获取表名
-                    String tableName=tableResultSet.getString("TABLE_NAME");
-                    // 名字操作,去掉tab_,tb_，去掉_并转驼峰
-                    String table = StringUtils.replace_(StringUtils.replaceTab(tableName));
-                    // 大写对象
-                    String Table =StringUtils.firstUpper(table);
+            // 获取数据库名字
+            String database = conn.getCatalog();
 
-                    // 需要生成的Vo属性集合
-                    List<ModelInfo> models = new ArrayList<>();
-                    // 所有需要导包的类型
-                    Set<String> typeSet = new HashSet<>();
+            // Swagger信息集合
+            List<SwaggerModel> swaggerModels = new ArrayList<>();       // Model
+            List<SwaggerPath> swaggerPathList = new ArrayList<>();    // Method
 
-                    // 获取表所有的列
-                    ResultSet cloumnsSet = metaData.getColumns(database, userName, tableName, null);
-                    // 获取主键
-                    ResultSet keySet = metaData.getPrimaryKeys(database, userName, tableName);
-                    String key ="",keyType="";
-                    while (keySet.next()){
-                        key=keySet.getString(4);
-                    }
+            // 循环所有表信息
+            while (tableResultSet.next()){
+                // 获取表名
+                String tableName=tableResultSet.getString("TABLE_NAME");
+                // 名字操作,去掉tab_,tb_，去掉_并转驼峰
+                String table = StringUtils.replace_(StringUtils.replaceTab(tableName));
+                // 大写对象
+                String Table =StringUtils.firstUpper(table);
 
-                    // 构建SwaggerModel对象
-                    SwaggerModel swaggerModel = new SwaggerModel();
-                    swaggerModel.setName(Table);
-                    swaggerModel.setType("object");
-                    swaggerModel.setDescription(Table);
-                    // 属性集合
-                    List<SwaggerModelProperties> swaggerModelProperties = new ArrayList<SwaggerModelProperties>();
+                // 需要生成的Vo属性集合
+                List<ModelInfo> models = new ArrayList<>();
+                // 所有需要导包的类型
+                Set<String> typeSet = new HashSet<>();
 
-                    while (cloumnsSet.next()){
-                        // 列的描述
-                        String remarks = cloumnsSet.getString("REMARKS");
-                        // 获取列名
-                        String columnName = cloumnsSet.getString("COLUMN_NAME");
-                        // 处理列名
-                        String propertyName = StringUtils.replace_(columnName.toLowerCase());
-                        // 获取类型，并转成JavaType
-                        String javaType = JavaTypes.getType(cloumnsSet.getInt("DATA_TYPE"));
-                        // 创建该列的信息
-                        models.add(new ModelInfo(javaType, JavaTypes.simpleName(javaType),propertyName,StringUtils.firstUpper(propertyName),remarks, key.equals(columnName),columnName,cloumnsSet.getString("IS_AUTOINCREMENT")));
-                        // 需要导包的类型
-                        typeSet.add(javaType);
-                        // 主键类型
-                        if(columnName.equals(key)){
-                            keyType=JavaTypes.simpleName(javaType);
-                        }
-
-                        // SwaggerModelProperties创建
-                        SwaggerModelProperties modelProperties = new SwaggerModelProperties();
-                        modelProperties.setName(propertyName);
-                        modelProperties.setType(JavaTypes.simpleNameLowerFirst(javaType));
-                        if(modelProperties.getType().equals("integer")){
-                            modelProperties.setFormat("int32");
-                        }
-                        modelProperties.setDescription(remarks);
-                        swaggerModelProperties.add(modelProperties);
-                    }
-                    // 属性集合
-                    swaggerModel.setProperties(swaggerModelProperties);
-                    swaggerModels.add(swaggerModel);
-
-                    // 创建该表的JavaBean
-                    Map<String,Object> modelMap = new HashMap<String,Object>();
-                    modelMap.put("projectName",PROJECT_NAME);
-                    modelMap.put("table",table);
-                    modelMap.put("Table",Table);
-                    modelMap.put("swagger",SWAGGER);
-                    modelMap.put("TableName",tableName);
-                    modelMap.put("models",models);
-                    modelMap.put("typeSet",typeSet);
-                    // 主键操作
-                    modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
-                    modelMap.put("keyType",keyType);
-                    modelMap.put("serviceName",SERVICE_NAME);
-
-                    // 创建VO
-                    VoBuilder.builder(modelMap);
-
-                    // 创建Mapper
-                    MapperBuilder.builder(modelMap);
-
-                    //创建MapperXml
-                    MapperXmlBuilder.builder(modelMap);
-
-                    // 创建Service接口
-                    ServiceBuilder.builder(modelMap);
-
-                    // 创建ServiceImpl实现类
-                    ServiceImplBuilder.builder(modelMap);
-
-                    // 创建Controller
-                    ControllerBuilder.builder(modelMap);
-
-                    // 创建Feign
-                    FeignBuilder.builder(modelMap);
-
-                    // 添加swagger路径映射
-                    String format="string";
-                    if(keyType.equalsIgnoreCase("integer") || keyType.equalsIgnoreCase("long")){
-                        format="int64";
-                    }
-                    swaggerPathList.addAll(swaggerMethodInit(Table,table,StringUtils.firstLower(keyType),format));
+                // 获取表所有的列
+                ResultSet cloumnsSet = conn.getMetaData().getColumns(database, userName, tableName, null);
+                // 获取主键
+                ResultSet keySet = conn.getMetaData().getPrimaryKeys(database, userName, tableName);
+                String key ="",keyType="";
+                while (keySet.next()){
+                    key=keySet.getString(4);
                 }
 
-                // 构建Swagger文档数据-JSON数据
-                Map<String,Object> swaggerModelMap = new HashMap<String,Object>();
-                swaggerModelMap.put("swaggerModels",swaggerModels);
-                swaggerModelMap.put("swaggerPathList",swaggerPathList);
-                // 生成Swagger文件
-                SwaggerBuilder.builder(swaggerModelMap);
-            }
-            //针对Oracle数据库进行相关生成操作
-            else if(databaseType.equals("ORACLE")){
+                // 构建SwaggerModel对象
+                SwaggerModel swaggerModel = new SwaggerModel();
+                swaggerModel.setName(Table);
+                swaggerModel.setType("object");
+                swaggerModel.setDescription(Table);
+                // 属性集合
+                List<SwaggerModelProperties> swaggerModelProperties = new ArrayList<SwaggerModelProperties>();
 
+                while (cloumnsSet.next()){
+                    // 列的描述
+                    String remarks = cloumnsSet.getString("REMARKS");
+                    // 获取列名
+                    String columnName = cloumnsSet.getString("COLUMN_NAME");
+                    // 处理列名
+                    String propertyName = StringUtils.replace_(columnName.toLowerCase());
+                    // 获取类型，并转成JavaType
+                    String javaType = JavaTypes.getType(cloumnsSet.getInt("DATA_TYPE"));
+                    // 创建该列的信息
+                    models.add(new ModelInfo(javaType, JavaTypes.simpleName(javaType),propertyName,StringUtils.firstUpper(propertyName),remarks, key.equals(columnName),columnName,cloumnsSet.getString("IS_AUTOINCREMENT")));
+                    // 需要导包的类型
+                    typeSet.add(javaType);
+                    // 主键类型
+                    if(columnName.equals(key)){
+                        keyType=JavaTypes.simpleName(javaType);
+                    }
+
+                    // SwaggerModelProperties创建
+                    SwaggerModelProperties modelProperties = new SwaggerModelProperties();
+                    modelProperties.setName(propertyName);
+                    modelProperties.setType(JavaTypes.simpleNameLowerFirst(javaType));
+                    if(modelProperties.getType().equals("integer")){
+                        modelProperties.setFormat("int32");
+                    }
+                    modelProperties.setDescription(remarks);
+                    swaggerModelProperties.add(modelProperties);
+                }
+                // 属性集合
+                swaggerModel.setProperties(swaggerModelProperties);
+                swaggerModels.add(swaggerModel);
+
+                // 创建该表的JavaBean
+                Map<String,Object> modelMap = new HashMap<String,Object>();
+                modelMap.put("projectName",PROJECT_NAME);
+                modelMap.put("SearchType",SEARCH_TYPE);
+                modelMap.put("table",table);
+                modelMap.put("Table",Table);
+                modelMap.put("swagger",SWAGGER);
+                modelMap.put("TableName",tableName);
+                modelMap.put("models",models);
+                modelMap.put("typeSet",typeSet);
+                // 主键操作
+                modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
+                modelMap.put("keyType",keyType);
+                modelMap.put("serviceName",SERVICE_NAME);
+
+                // 创建VO
+                VoBuilder.builder(modelMap);
+
+                // 创建Mapper
+                MapperBuilder.builder(modelMap);
+
+                //创建MapperXml
+                MapperXmlBuilder.builder(modelMap);
+
+                // 创建Service接口
+                ServiceBuilder.builder(modelMap);
+
+                // 创建ServiceImpl实现类
+                ServiceImplBuilder.builder(modelMap);
+
+                // 创建Controller
+                ControllerBuilder.builder(modelMap);
+
+                // 创建Feign
+                FeignBuilder.builder(modelMap);
+
+                // 添加swagger路径映射
+                String format="string";
+                if(keyType.equalsIgnoreCase("integer") || keyType.equalsIgnoreCase("long")){
+                    format="int64";
+                }
+                swaggerPathList.addAll(swaggerMethodInit(Table,table,StringUtils.firstLower(keyType),format));
             }
+
+            // 构建Swagger文档数据-JSON数据
+            Map<String,Object> swaggerModelMap = new HashMap<String,Object>();
+            swaggerModelMap.put("swaggerModels",swaggerModels);
+            swaggerModelMap.put("swaggerPathList",swaggerPathList);
+            // 生成Swagger文件
+            SwaggerBuilder.builder(swaggerModelMap);
         } catch (SQLException e) {
             e.printStackTrace();
         }

@@ -13,7 +13,7 @@ public class StringUtils {
      * @return
      */
     public static String firstUpper(String str){
-        return str.substring(0,1).toUpperCase()+str.substring(1);
+        return str.substring(0,1).toUpperCase()+str.substring(1).toLowerCase();
     }
 
     /**
@@ -22,7 +22,7 @@ public class StringUtils {
      * @return
      */
     public static String firstLower(String str){
-        return str.substring(0,1).toLowerCase()+str.substring(1);
+        return str.substring(0,1).toLowerCase()+str.substring(1).toLowerCase();
     }
 
     /***
@@ -30,7 +30,7 @@ public class StringUtils {
      * @return
      */
     public static String replaceTab(String str){
-        return str.replaceFirst("tab_","").replaceFirst("tb_","");
+        return str.replaceFirst("tab_","").replaceFirst("tb_","").replaceFirst("TAB_","").replaceFirst("TB_","").toLowerCase();
     }
 
     /***
@@ -40,7 +40,7 @@ public class StringUtils {
      */
     public static String replace_(String str){
         // 根据下划线分割
-        String[] split = str.split("_");
+        String[] split = str.toLowerCase().split("_");
         // 循环组装
         String result = split[0];
         if(split.length>1){
