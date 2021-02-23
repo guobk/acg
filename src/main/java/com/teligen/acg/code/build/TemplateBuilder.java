@@ -104,10 +104,13 @@ public class TemplateBuilder {
             modelMap.put("SearchType",SEARCH_TYPE);
             modelMap.put("resourceID",props.getProperty("ResourceID"));
             modelMap.put("TableID",tableName);
+            modelMap.put("ConditionWordsEqual",props.getProperty("ConditionWordsEqual")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("ConditionWordsEqual").split(",")));
+            modelMap.put("ConditionWordsLike",props.getProperty("ConditionWordsLike")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("ConditionWordsLike").split(",")));
+            modelMap.put("ConditionWordsStart",props.getProperty("ConditionWordsStart"));
+            modelMap.put("ConditionWordsEnd",props.getProperty("ConditionWordsEnd"));
             modelMap.put("table",table);
             modelMap.put("Table",Table);
             modelMap.put("swagger",SWAGGER);
-
             // 创建Service接口
             ServiceBuilder.builder(modelMap);
 

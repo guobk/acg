@@ -29,10 +29,14 @@ application.properties中配置
     package_mapper:mapper包路径
     package_mapperxml:mapperxml包路径
     package_service:service接口包路径
-    package_service_impl：serviceImpl实现类包路径
-    SearchType：查询类型 0:matrixMPP; 1:matrixOracle; 2:Oracle; 3:MySql
-    ResourceID：资源ID
-    TableID：表名
+    package_service_impl:serviceImpl实现类包路径
+    SearchType:查询类型 0:matrixMPP; 1:matrixOracle; 2:Oracle; 3:MySql
+    ResourceID:资源ID
+    TableID:表名
+    ConditionWordsEqual:查询条件（精确匹配）（多个条件用 , 分隔）
+    ConditionWordsLike:查询条件（模糊匹配）（多个条件用 , 分隔）
+    ConditionWordsStart:开始时间过滤条件
+    ConditionWordsEnd:结束时间过滤条件
 
 6. 多条件搜索时，如果属性名字包含name、title，则会进行like模糊搜索
 

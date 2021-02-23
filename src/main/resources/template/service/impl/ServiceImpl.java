@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -44,18 +45,69 @@ public class ${Table}ServiceImpl implements ${Table}Service {
     @Override
     public Map get${Table}List(Map paramMap){
         Map resultMap = new HashMap<>();
+    <#if SearchType=="0" || SearchType=="1">
 
         String resourceId = "${resourceID}";
         String tableName = "${TableID}";
-        int pageNum = paramMap.get("pageNum") == null ? 1 : Integer.parseInt(paramMap.get("pageNum").toString());
-        int pageSize = paramMap.get("pageSize") == null ? 1 : Integer.parseInt(paramMap.get("pageSize").toString());
 
-    <#if SearchType=="0">
+        <#list ConditionWordsEqual as conditionEQ>
+        String ${conditionEQ} = paramMap.get("${conditionEQ}") == null ? "" : paramMap.get("${conditionEQ}").toString();
+        </#list>
+        <#list ConditionWordsLike as conditionLK>
+        String ${conditionLK} = paramMap.get("${conditionLK}") == null ? "" : paramMap.get("${conditionLK}").toString();
+        </#list>
+        <#if ConditionWordsStart??>
+        String ${ConditionWordsStart} = paramMap.get("${ConditionWordsStart}") == null ? "" : paramMap.get("${ConditionWordsStart}").toString();
+        </#if>
+        <#if ConditionWordsEnd??>
+        String ${ConditionWordsEnd} = paramMap.get("${ConditionWordsEnd}") == null ? "" : paramMap.get("${ConditionWordsEnd}").toString();
+        </#if>
+    </#if>
+        int pageNum = paramMap.get("pageNum") == null ? 1 : Integer.parseInt(paramMap.get("pageNum").toString());
+        int pageSize = paramMap.get("pageSize") == null ? 1000 : Integer.parseInt(paramMap.get("pageSize").toString());
+
+    <#if SearchType=="0" || SearchType=="1">
         String querySql = "select * from " + tableName + " where 1=1";
-        String queryTotalSql = "select count(*) from " + tableName + " where 1=1";
+        String queryTotalSql = "select count(*) as TOTAL from " + tableName + " where 1=1 ";
+        String conditionSql = "";
+        String conditionLikeSql = "";
+    <#list ConditionWordsEqual as conditionEQ>
+        if(StringUtils.hasText("${conditionEQ}")){
+            conditionSql +=" and ${conditionEQ}='" +${conditionEQ}+ "' ";
+        }
+    </#list>
+    <#if ConditionWordsLike??>
+    <#list ConditionWordsLike as conditionLK>
+        if(StringUtils.hasText("${conditionLK}")){
+            conditionLikeSql +="or ${conditionLK} like '%" +${conditionLK}+ "%' ";
+        }
+    </#list>
+        if(StringUtils.hasText(conditionLikeSql)){
+            conditionLikeSql = conditionLikeSql.substring(2);
+        }
+    </#if>
+    <#if ConditionWordsStart??>
+        if(StringUtils.hasText("${ConditionWordsStart}")){
+            conditionSql +=" and ${ConditionWordsStart} &gt;= '" +${ConditionWordsStart}+ "' ";
+        }
+    </#if>
+    <#if ConditionWordsEnd??>
+        if(StringUtils.hasText("${ConditionWordsEnd}")){
+            conditionSql +=" and ${ConditionWordsEnd} &lt;= '" +${ConditionWordsEnd}+ "' ";
+        }
+    </#if>
+        if(StringUtils.hasText(conditionLikeSql)){
+            conditionSql = conditionSql + " and ( " + conditionLikeSql + " ) ";
+        }
+        if(StringUtils.hasText(conditionSql)){
+            querySql += conditionSql;
+            queryTotalSql += conditionSql;
+        }
+    </#if>
+    <#if SearchType == "0">
         List<Map> totalList = restTemplate.postForObject(this.common_url + "/matrixservice/queryMPPBySQL?resourceId={resourceId}&querySQL={querySQL}",null,List.class,resourceId,queryTotalSql);
         if(totalList.size() > 0){
-            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("COUNT_DATA")));
+            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("TOTAL")));
             List<Map> dataList = restTemplate.postForObject(this.common_url + "/matrixservice/queryMPPBySQL?resourceId={resourceId}&querySQL={querySQL}&pageNum={pageNum}&pageSize={pageSize}",null,List.class,resourceId,querySql,pageNum,pageSize);
             resultMap.put("detail",dataList);
         }else {
@@ -63,11 +115,9 @@ public class ${Table}ServiceImpl implements ${Table}Service {
             resultMap.put("detail",new ArrayList<>());
         }
     <#elseif SearchType == "1">
-        String querySql = "select * from " + tableName + " where 1=1";
-        String queryTotalSql = "select count(*) from " + tableName + " where 1=1";
         List<Map> totalList = restTemplate.postForObject(this.common_url + "/matrixservice/queryOracleBySQL?resourceId={resourceId}&querySQL={querySQL}",null,List.class,resourceId,queryTotalSql);
         if(totalList.size() > 0){
-            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("COUNT_DATA")));
+            resultMap.put("total",Integer.parseInt((String)totalList.get(0).get("TOTAL")));
             List<Map> dataList = restTemplate.postForObject(this.common_url + "/matrixservice/queryOracleBySQL?resourceId={resourceId}&querySQL={querySQL}&pageNum={pageNum}&pageSize={pageSize}",null,List.class,resourceId,querySql,pageNum,pageSize);
             resultMap.put("detail",dataList);
         }else {
