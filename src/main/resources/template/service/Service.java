@@ -13,4 +13,25 @@ public interface ${Table}Service {
      * @return
      */
     Map get${Table}List(Map paramMap);
+
+    /***
+     * 删除${Table}列表数据
+     * @param paramMap
+     * @return
+     */
+    Map delete${Table}List(Map paramMap);
+
+    /***
+     * 更新${Table}列表数据
+     * @param paramMap
+     * @return
+     */
+    Map update${Table}(Map paramMap);
+
+    /***
+     * 新增${Table}列表数据
+     * @param paramMap
+     * @return
+     */
+    Map insert${Table}(Map paramMap);
 }

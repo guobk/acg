@@ -37,8 +37,14 @@ public class TemplateBuilder {
     // feignPackage
     public static String PACKAGE_FEIGN;
 
+    // 数据库名称
+    public static String databaseName;
+
     // 数据库账号
     public static String userName;
+
+    // 表名
+    public static String tablePattern;
 
     // 项目路径
     public static String PROJECT_PATH;
@@ -72,7 +78,9 @@ public class TemplateBuilder {
             PACKAGE_SERVICE_INTERFACE_IMPL = props.getProperty("serviceInterfaceImplPackage");
             PACKAGE_CONTROLLER = props.getProperty("controllerPackage");
             PACKAGE_FEIGN= props.getProperty("feignPackage");
+            databaseName = props.getProperty("databaseName");
             userName = props.getProperty("userName");
+            tablePattern = props.getProperty("tablePattern");
             SWAGGER = Boolean.valueOf(props.getProperty("enableSwagger"));
             SERVICE_NAME = props.getProperty("serviceName");
             SEARCH_TYPE = props.getProperty("SearchType");
@@ -104,10 +112,15 @@ public class TemplateBuilder {
             modelMap.put("SearchType",SEARCH_TYPE);
             modelMap.put("resourceID",props.getProperty("ResourceID"));
             modelMap.put("TableID",tableName);
-            modelMap.put("ConditionWordsEqual",props.getProperty("ConditionWordsEqual")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("ConditionWordsEqual").split(",")));
-            modelMap.put("ConditionWordsLike",props.getProperty("ConditionWordsLike")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("ConditionWordsLike").split(",")));
-            modelMap.put("ConditionWordsStart",props.getProperty("ConditionWordsStart"));
-            modelMap.put("ConditionWordsEnd",props.getProperty("ConditionWordsEnd"));
+            modelMap.put("SearchConditionWordsEqual",props.getProperty("SearchConditionWordsEqual")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("SearchConditionWordsEqual").split(",")));
+            modelMap.put("SearchConditionWordsLike",props.getProperty("SearchConditionWordsLike")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("SearchConditionWordsLike").split(",")));
+            modelMap.put("SearchConditionWordsStart",props.getProperty("SearchConditionWordsStart"));
+            modelMap.put("SearchConditionWordsEnd",props.getProperty("SearchConditionWordsEnd"));
+            modelMap.put("DeleteConditionWords",props.getProperty("DeleteConditionWords")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("DeleteConditionWords").split(",")));
+            modelMap.put("DeleteConditionSplit",props.getProperty("DeleteConditionSplit"));
+            modelMap.put("UpdateConditionWords",props.getProperty("UpdateConditionWords")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("UpdateConditionWords").split(",")));
+            modelMap.put("UpdateKeyWords",props.getProperty("UpdateKeyWords")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("UpdateKeyWords").split(",")));
+            modelMap.put("InsertConditionWords",props.getProperty("InsertConditionWords")==null ? new ArrayList<>() : Arrays.asList(props.getProperty("InsertConditionWords").split(",")));
             modelMap.put("table",table);
             modelMap.put("Table",Table);
             modelMap.put("swagger",SWAGGER);
@@ -120,7 +133,7 @@ public class TemplateBuilder {
             // 创建Controller
             ControllerBuilder.builder(modelMap);
 
-        }else if(SEARCH_TYPE.equals("2")){
+        }else if(SEARCH_TYPE.equals("2")||SEARCH_TYPE.equals("3")){
             try {
                 // 获取数据库连接
                 Connection conn = DriverManager.getConnection(
@@ -138,7 +151,7 @@ public class TemplateBuilder {
                 }
                 //针对Oracle数据库进行相关生成操作
                 else if(databaseType.equals("Oracle")){
-                    builderOracle();
+                    builderOracle(conn);
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -146,8 +159,134 @@ public class TemplateBuilder {
         }
     }
 
-    public static void builderOracle(){
-        //针对Oracle 在hz版本开发
+    public static void builderOracle(Connection conn){
+        try {
+            // 获取所有表结构
+            ResultSet tableResultSet = conn.getMetaData().getTables(null, databaseName, tablePattern, new String[]{"TABLE"});
+
+            // 获取数据库名字
+            String database = conn.getCatalog();
+
+            // Swagger信息集合
+            List<SwaggerModel> swaggerModels = new ArrayList<>();       // Model
+            List<SwaggerPath> swaggerPathList = new ArrayList<>();    // Method
+
+            // 循环所有表信息
+            while (tableResultSet.next()){
+                // 获取表名
+                String tableName=tableResultSet.getString("TABLE_NAME");
+                // 名字操作,去掉tab_,tb_，去掉_并转驼峰
+                String table = StringUtils.replace_(StringUtils.replaceTab(tableName));
+                // 大写对象
+                String Table =StringUtils.firstUpper(table);
+
+                // 需要生成的Vo属性集合
+                List<ModelInfo> models = new ArrayList<>();
+                // 所有需要导包的类型
+                Set<String> typeSet = new HashSet<>();
+
+                // 获取表所有的列
+                ResultSet cloumnsSet = conn.getMetaData().getColumns(database, databaseName, tableName, null);
+                // 获取主键
+                ResultSet keySet = conn.getMetaData().getPrimaryKeys(database, userName, tableName);
+                String key ="",keyType="";
+                while (keySet.next()){
+                    key=keySet.getString(4);
+                }
+
+                // 构建SwaggerModel对象
+                SwaggerModel swaggerModel = new SwaggerModel();
+                swaggerModel.setName(Table);
+                swaggerModel.setType("object");
+                swaggerModel.setDescription(Table);
+                // 属性集合
+                List<SwaggerModelProperties> swaggerModelProperties = new ArrayList<SwaggerModelProperties>();
+
+                while (cloumnsSet.next()){
+                    // 列的描述
+                    String remarks = cloumnsSet.getString("REMARKS");
+                    // 获取列名
+                    String columnName = cloumnsSet.getString("COLUMN_NAME");
+                    // 处理列名
+                    String propertyName = StringUtils.replace_(columnName.toLowerCase());
+                    // 获取类型，并转成JavaType
+                    String javaType = JavaTypes.getType(cloumnsSet.getInt("DATA_TYPE"));
+                    // 创建该列的信息
+                    models.add(new ModelInfo(javaType, JavaTypes.simpleName(javaType),propertyName,StringUtils.firstUpper(propertyName),remarks, key.equals(columnName),columnName,cloumnsSet.getString("IS_AUTOINCREMENT")));
+                    // 需要导包的类型
+                    typeSet.add(javaType);
+                    // 主键类型
+                    if(columnName.equals(key)){
+                        keyType=JavaTypes.simpleName(javaType);
+                    }
+
+                    // SwaggerModelProperties创建
+                    SwaggerModelProperties modelProperties = new SwaggerModelProperties();
+                    modelProperties.setName(propertyName);
+                    modelProperties.setType(JavaTypes.simpleNameLowerFirst(javaType));
+                    if(modelProperties.getType().equals("integer")){
+                        modelProperties.setFormat("int32");
+                    }
+                    modelProperties.setDescription(remarks);
+                    swaggerModelProperties.add(modelProperties);
+                }
+                // 属性集合
+                swaggerModel.setProperties(swaggerModelProperties);
+                swaggerModels.add(swaggerModel);
+
+                // 创建该表的JavaBean
+                Map<String,Object> modelMap = new HashMap<String,Object>();
+                modelMap.put("projectName",PROJECT_NAME);
+                modelMap.put("SearchType",SEARCH_TYPE);
+                modelMap.put("table",table);
+                modelMap.put("Table",Table);
+                modelMap.put("swagger",SWAGGER);
+                modelMap.put("TableName",tableName);
+                modelMap.put("models",models);
+                modelMap.put("typeSet",typeSet);
+                // 主键操作
+                modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
+                modelMap.put("keyType",keyType);
+                modelMap.put("serviceName",SERVICE_NAME);
+
+                // 创建VO
+                VoBuilder.builder(modelMap);
+
+                // 创建Mapper
+                MapperBuilder.builder(modelMap);
+
+                //创建MapperXml
+                MapperXmlBuilder.builder(modelMap);
+
+                // 创建Service接口
+                ServiceBuilder.builder(modelMap);
+
+                // 创建ServiceImpl实现类
+                ServiceImplBuilder.builder(modelMap);
+
+                // 创建Controller
+                ControllerBuilder.builder(modelMap);
+
+                // 创建Feign
+                FeignBuilder.builder(modelMap);
+
+                // 添加swagger路径映射
+                String format="string";
+                if(keyType.equalsIgnoreCase("integer") || keyType.equalsIgnoreCase("long")){
+                    format="int64";
+                }
+                swaggerPathList.addAll(swaggerMethodInit(Table,table,StringUtils.firstLower(keyType),format));
+            }
+
+            // 构建Swagger文档数据-JSON数据
+            Map<String,Object> swaggerModelMap = new HashMap<String,Object>();
+            swaggerModelMap.put("swaggerModels",swaggerModels);
+            swaggerModelMap.put("swaggerPathList",swaggerPathList);
+            // 生成Swagger文件
+            SwaggerBuilder.builder(swaggerModelMap);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void builderMySql(Connection conn){

@@ -32,8 +32,53 @@ public class ${Table}Controller {
     })
     </#if>
     @RequestMapping(path = "/get${Table}List" ,method = RequestMethod.POST)
-    public Map get${Table}List(@RequestParam Map paramMap<#if swagger==true>@ApiParam(name = "${Table}对象",value = "传入JSON数据",required = false)</#if>){
+    public Map get${Table}List(@RequestParam Map paramMap<#if swagger==true>@ApiParam(name = "${Table}对象字段",value = "传入JSON数据",required = false)</#if>){
         return ${table}Service.get${Table}List(paramMap);
+    }
+
+    /***
+     * 删除${Table}列表数据
+     * @return
+     */
+    <#if swagger==true>
+    @ApiOperation(value = "删除${Table}列表数据",notes = "删除${Table}列表数据",tags = {"${Table}Controller"})
+    @ApiImplicitParams({
+        @ApiImplicitParam(paramType = "path", name = "paramMap", value = "删除数据依赖的参数列表", required = true, dataType = "Map")
+    })
+    </#if>
+    @RequestMapping(path = "/delete${Table}List" ,method = RequestMethod.POST)
+    public Map delete${Table}List(@RequestParam Map paramMap<#if swagger==true>@ApiParam(name = "${Table}对象字段",value = "传入JSON数据",required = false)</#if>){
+        return ${table}Service.delete${Table}List(paramMap);
+    }
+
+    /***
+     * 更新${Table}列表数据
+     * @return
+     */
+    <#if swagger==true>
+    @ApiOperation(value = "更新${Table}列表数据",notes = "更新${Table}列表数据",tags = {"${Table}Controller"})
+    @ApiImplicitParams({
+        @ApiImplicitParam(paramType = "path", name = "paramMap", value = "更新数据依赖的参数列表", required = true, dataType = "Map")
+    })
+    </#if>
+    @RequestMapping(path = "/update${Table}" ,method = RequestMethod.POST)
+    public Map update${Table}(@RequestParam Map paramMap<#if swagger==true>@ApiParam(name = "${Table}对象字段",value = "传入JSON数据",required = false)</#if>){
+        return ${table}Service.update${Table}(paramMap);
+    }
+
+    /***
+     * 新增${Table}列表数据
+     * @return
+     */
+    <#if swagger==true>
+    @ApiOperation(value = "新增${Table}列表数据",notes = "新增${Table}列表数据",tags = {"${Table}Controller"})
+    @ApiImplicitParams({
+        @ApiImplicitParam(paramType = "path", name = "paramMap", value = "新增数据依赖的参数列表", required = true, dataType = "Map")
+    })
+    </#if>
+    @RequestMapping(path = "/insert${Table}" ,method = RequestMethod.POST)
+    public Map insert${Table}(@RequestParam Map paramMap<#if swagger==true>@ApiParam(name = "${Table}对象字段",value = "传入JSON数据",required = false)</#if>){
+        return ${table}Service.insert${Table}(paramMap);
     }
 
 }
