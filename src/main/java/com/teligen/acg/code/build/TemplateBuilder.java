@@ -245,8 +245,8 @@ public class TemplateBuilder {
                 modelMap.put("models",models);
                 modelMap.put("typeSet",typeSet);
                 // 主键操作
-                modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
-                modelMap.put("keyType",keyType);
+//                 modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
+//                 modelMap.put("keyType",keyType);
                 modelMap.put("serviceName",SERVICE_NAME);
 
                 // 创建VO
@@ -375,8 +375,8 @@ public class TemplateBuilder {
                 modelMap.put("models",models);
                 modelMap.put("typeSet",typeSet);
                 // 主键操作
-                modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
-                modelMap.put("keyType",keyType);
+//                 modelMap.put("keySetMethod","set"+StringUtils.firstUpper(StringUtils.replace_(key)));
+//                 modelMap.put("keyType",keyType);
                 modelMap.put("serviceName",SERVICE_NAME);
 
                 // 创建VO
