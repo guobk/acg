@@ -1,7 +1,62 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="${package_mapper}.${Table}Mapper">
-    <select id="getByUsernameAndPassword" resultType="${package_vo}.${Table}" parameterType="java.lang.String">
-            SELECT * FROM tb_user t where t.username = ${r"#{userName}"}  and t.password = ${r"#{passWord}"}
-        </select>
+
+    <select id="get${Table}List" resultType="${package_vo}.${Table}" parameterType="java.util.Map">
+        SELECT * FROM ${TableName} t WHERE 1=1
+    <#list models as model>
+        <if test="${model.name} != null and ${model.name} != ''">
+            AND ${model.name} = ${r"#{"}${model.name}${r"}"}
+        </if>
+    </#list>
+    </select>
+
+    <delete id="delete${Table}List" parameterType="${package_vo}.${Table}">
+        DELETE FROM ${TableName} t WHERE 1=1
+    <#list models as model>
+        <if test="${model.name} != null and ${model.name} != ''">
+            AND ${model.name} = ${r"#{"}${model.name}${r"}"}
+        </if>
+    </#list>
+    </delete>
+
+    <insert id="insert${Table}" parameterType="${package_vo}.${Table}">
+        INSERT INTO ${TableName}
+        (
+    <#list models as model>
+    <#if model_index == 0>
+        ${model.name}
+    <#else>
+        ,${model.name}
+    </#if>
+    </#list>
+        )
+        VALUES (
+    <#list models as model>
+    <#if model_index == 0>
+        ${r"#{"}${model.name}${r"}"}
+    <#else>
+        ,${r"#{"}${model.name}${r"}"}
+    </#if>
+    </#list>
+        )
+    </insert>
+
+    <update id="update${Table}" parameterType="${package_vo}.${Table}">
+        UPDATE ${TableName} t SET
+--         TODO 这里的条件还没想到更好的解决办法
+    <#list models as model>
+    <#if model_index == 0>
+        t.${model.name} = ${r"#{"}${model.name}${r"}"}
+    <#else>
+        ,t.${model.name} = ${r"#{"}${model.name}${r"}"}
+    </#if>
+    </#list>
+        WHERE 1=1
+    <#list models as model>
+        <if test="${model.name} != null and ${model.name} != ''">
+            AND ${model.name} = ${r"#{"}${model.name}${r"}"}
+        </if>
+    </#list>
+    </update>
 </mapper>

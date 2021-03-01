@@ -1,7 +1,11 @@
 package ${package_feign};
-import com.teligen.acg.code.entity.Result;
+
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Map;
 
 /****
  * @Author: https://github.com/guobk/
@@ -11,69 +15,31 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public interface ${Table}Feign {
 
     /***
-     * 分页+条件搜索${Table}表数据
-     * @param ${table}
-     * @param page
-     * @param size
+     * 查询${Table}表数据
      * @return
      */
-    @PostMapping(value = "/search/{page}/{size}" )
-    Result<PageInfo> findPage(@RequestBody(required = false) ${Table} ${table}, @PathVariable  int page, @PathVariable  int size);
+    @RequestMapping(path = "/get${Table}List" ,method = RequestMethod.POST)
+    Map get${Table}List(@RequestParam Map paramMap);
 
     /***
-     * 分页搜索${Table}表数据
-     * @param page:当前页
-     * @param size:每页显示多少条
+     * 删除${Table}表数据
      * @return
      */
-    @GetMapping(value = "/search/{page}/{size}" )
-    Result<PageInfo> findPage(@PathVariable  int page, @PathVariable  int size);
+    @RequestMapping(path = "/delete${Table}List" ,method = RequestMethod.POST)
+    Map delete${Table}List(@RequestParam Map paramMap);
 
     /***
-     * 多条件搜索${Table}表数据
-     * @param ${table}
+     * 更新${Table}表数据
      * @return
      */
-    @PostMapping(value = "/search" )
-    Result<List<${Table}>> findList(@RequestBody(required = false) ${Table} ${table});
-
-    /***
-     * 根据ID删除${Table}表数据
-     * @param id
-     * @return
-     */
-    @DeleteMapping(value = "/{id}" )
-    Result delete(@PathVariable ${keyType} id);
-
-    /***
-     * 修改${Table}表数据
-     * @param ${table}
-     * @param id
-     * @return
-     */
-    @PutMapping(value="/{id}")
-    Result update(@RequestBody ${Table} ${table},@PathVariable ${keyType} id);
+    @RequestMapping(path = "/update${Table}" ,method = RequestMethod.POST)
+    Map update${Table}(@RequestParam Map paramMap);
 
     /***
      * 新增${Table}表数据
-     * @param ${table}
      * @return
      */
-    @PostMapping
-    Result add(@RequestBody ${Table} ${table});
+    @RequestMapping(path = "/insert${Table}" ,method = RequestMethod.POST)
+    Map insert${Table}(@RequestParam Map paramMap);
 
-    /***
-     * 根据ID查询${Table}表数据
-     * @param id
-     * @return
-     */
-    @GetMapping("/{id}")
-    Result<${Table}> findById(@PathVariable ${keyType} id);
-
-    /***
-     * 查询${Table}表全部数据
-     * @return
-     */
-    @GetMapping
-    Result<List<${Table}>> findAll();
 }

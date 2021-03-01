@@ -1,6 +1,8 @@
 package ${package_service_impl};
 
 <#if SearchType=="2" || SearchType=="3">
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import ${package_mapper}.${Table}Mapper;
 import ${package_vo}.${Table};
 </#if>
@@ -30,13 +32,12 @@ public class ${Table}ServiceImpl implements ${Table}Service {
     @Autowired
     private ${Table}Mapper ${table}Mapper;
     </#if>
-
+    <#if SearchType=="0" || SearchType=="1">
     @Autowired
     private RestTemplate restTemplate;
 
     ${r'@Value("${common_url}")'}
     private String common_url;
-    <#if SearchType=="0" || SearchType=="1">
 
     private static final String QueryMPPRoute = "/matrixservice/queryMPPBySQL?resourceId={resourceId}&querySQL={querySQL}";
     private static final String QueryOracleRoute = "/matrixservice/queryOracleBySQL?resourceId={resourceId}&querySQL={querySQL}";
@@ -69,6 +70,7 @@ public class ${Table}ServiceImpl implements ${Table}Service {
         String ${SearchConditionWordsEnd} = paramMap.get("${SearchConditionWordsEnd}") == null ? "" : paramMap.get("${SearchConditionWordsEnd}").toString();
         </#if>
     </#if>
+
         int pageNum = paramMap.get("pageNum") == null ? 1 : Integer.parseInt(paramMap.get("pageNum").toString());
         int pageSize = paramMap.get("pageSize") == null ? 1000 : Integer.parseInt(paramMap.get("pageSize").toString());
 
@@ -135,10 +137,18 @@ public class ${Table}ServiceImpl implements ${Table}Service {
             resultMap.put("total",0);
             resultMap.put("detail",new ArrayList<>());
         }
-    <#elseif SearchType == "2">
-        //TODO Oracle
-    <#elseif SearchType == "3">
-        //TODO MySql
+    <#elseif SearchType == "2" || SearchType == "3">
+        PageHelper.startPage(pageNum,pageSize);
+        List<${Table}> list = ${table}Mapper.get${Table}List(paramMap);
+        PageInfo pageInfo = new PageInfo(list);
+
+        Map pageMap = new HashMap();
+        pageMap.put("pageNum",pageNum);
+        pageMap.put("pageSize",pageSize);
+        pageMap.put("pageTotal",pageInfo.getTotal());
+
+        resultMap.put("page",pageMap);
+        resultMap.put("list",list);
     </#if>
 
         return resultMap;
@@ -197,10 +207,12 @@ public class ${Table}ServiceImpl implements ${Table}Service {
         resultMap.put("status","success");
         return resultMap;
 
-    <#elseif SearchType == "2">
-    //TODO Oracle
-    <#elseif SearchType == "3">
-    //TODO MySql
+    <#elseif SearchType == "2" || SearchType == "3">
+        ${Table} ${table} = (User) paramMap.get("${table}");
+        int rows = userMapper.delete${Table}List(${table});
+
+        resultMap.put("status",rows);
+        return resultMap;
     </#if>
     }
 
@@ -237,7 +249,12 @@ public class ${Table}ServiceImpl implements ${Table}Service {
     <#if SearchType == "0" ||   SearchType == "1">
         String updateSql = "update set " + tableName;
     <#list UpdateConditionWords as conditionUPDATE>
+    <#if conditionUPDATE_index == 0>
         updateSql +=" ${conditionUPDATE} ='" + ${conditionUPDATE} + "' ";
+    <#else>
+        updateSql +=", ${conditionUPDATE} ='" + ${conditionUPDATE} + "' ";
+    </#if>
+
     </#list>
         updateSql +=" where 1=1 ";
     <#list UpdateKeyWords as keyWords>
@@ -258,10 +275,12 @@ public class ${Table}ServiceImpl implements ${Table}Service {
         resultMap.put("status","success");
         return resultMap;
 
-    <#elseif SearchType == "2">
-    //TODO Oracle
-    <#elseif SearchType == "3">
-    //TODO MySql
+    <#elseif SearchType == "2" || SearchType == "3">
+        ${Table} ${table} = (User) paramMap.get("${table}");
+        int rows = userMapper.update${Table}(${table});
+
+        resultMap.put("status",rows);
+        return resultMap;
     </#if>
     }
 
@@ -318,10 +337,12 @@ public class ${Table}ServiceImpl implements ${Table}Service {
         resultMap.put("status","success");
         return resultMap;
 
-    <#elseif SearchType == "2">
-    //TODO Oracle
-    <#elseif SearchType == "3">
-    //TODO MySql
+    <#elseif SearchType == "2" || SearchType == "3">
+        ${Table} ${table} = (User) paramMap.get("${table}");
+        int rows = userMapper.insert${Table}(${table});
+
+        resultMap.put("status",rows);
+        return resultMap;
     </#if>
     }
 }
